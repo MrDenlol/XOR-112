@@ -1,0 +1,24 @@
+name: Bug report / Ошибка
+description: Report a reproducible problem / Сообщить об ошибке
+title: "[Bug]: "
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Version and OS / Версия и ОС
+      placeholder: XOR-112 0.1.0, Windows 11 x64
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce / Как повторить
+      description: Include a small circuit or screenshot if useful. Remove personal information.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior / Ожидаемое и фактическое поведение
+    validations:
+      required: true

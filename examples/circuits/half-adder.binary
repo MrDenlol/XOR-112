@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "title": "Полусумматор",
+  "nodes": [
+    {
+      "id": 1,
+      "kind": "Input",
+      "label": "A",
+      "x": 80.0,
+      "y": 100.0,
+      "value": "1"
+    },
+    {
+      "id": 2,
+      "kind": "Input",
+      "label": "B",
+      "x": 80.0,
+      "y": 300.0,
+      "value": "0"
+    },
+    {
+      "id": 3,
+      "kind": "Xor",
+      "label": "",
+      "x": 340.0,
+      "y": 100.0,
+      "value": "0"
+    },
+    {
+      "id": 4,
+      "kind": "And",
+      "label": "",
+      "x": 340.0,
+      "y": 300.0,
+      "value": "0"
+    },
+    {
+      "id": 5,
+      "kind": "Output",
+      "label": "Сумма",
+      "x": 600.0,
+      "y": 100.0,
+      "value": "0"
+    },
+    {
+      "id": 6,
+      "kind": "Output",
+      "label": "Перенос",
+      "x": 600.0,
+      "y": 300.0,
+      "value": "0"
+    }
+  ],
+  "wires": [
+    {
+      "from": 1,
+      "to": 3,
+      "port": 0
+    },
+    {
+      "from": 2,
+      "to": 3,
+      "port": 1
+    },
+    {
+      "from": 1,
+      "to": 4,
+      "port": 0
+    },
+    {
+      "from": 2,
+      "to": 4,
+      "port": 1
+    },
+    {
+      "from": 3,
+      "to": 5,
+      "port": 0
+    },
+    {
+      "from": 4,
+      "to": 6,
+      "port": 0
+    }
+  ]
+}

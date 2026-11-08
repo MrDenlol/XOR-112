@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-label="XOR-112 — Binary logic, visible at every gate">
+<rect width="1280" height="320" rx="24" fill="#eef5ef"/>
+<pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#dce9df"/></pattern><rect width="1280" height="320" rx="24" fill="url(#grid)"/>
+<rect x="64" y="70" width="180" height="180" rx="42" fill="#16834a"/>
+<g fill="none" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M113 112Q143 160 113 208 M124 112Q168 112 203 160Q168 208 124 208Q154 160 124 112Z"/><path d="M88 138H133M88 182H133M203 160H221"/></g>
+<g font-family="Segoe UI,Arial,sans-serif"><text x="286" y="152" font-size="74" font-weight="700" fill="#183c2b">XOR-112</text><text x="290" y="202" font-size="26" fill="#4c6959">Binary logic, visible at every gate.</text><text x="290" y="244" font-size="19" fill="#4c6959">Rust · Desktop circuit editor · Editable 32 / 64-bit ALUs</text></g></svg>

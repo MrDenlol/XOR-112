@@ -1,0 +1,23 @@
+[package]
+name = "xor-112"
+version = "0.1.0"
+edition = "2021"
+description = "Binary logic circuit editor with fully editable 32-bit and 64-bit ALUs"
+repository = "https://github.com/MrDenlol/XOR-112"
+readme = "README.md"
+keywords = ["logic", "circuit", "simulation", "alu", "egui"]
+categories = ["simulation", "visualization", "gui"]
+publish = false
+license = "MIT"
+
+[dependencies]
+eframe = { version = "=0.31.1", default-features = false, features = ["default_fonts", "glow", "x11", "wayland"] }
+rfd = "=0.15.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tempfile = "3"
+
+[profile.release]
+opt-level = 2
+strip = true
+

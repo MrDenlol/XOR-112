@@ -1,0 +1,11 @@
+/target/
+/dist/
+*.exe
+*.tmp
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+/examples/circuits/alu32.binary
+/examples/circuits/alu64.binary
