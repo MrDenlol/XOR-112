@@ -1,14 +1,12 @@
 <p align="center"><img src="docs/images/banner.svg" alt="XOR-112" width="100%"></p>
 
-[![XERJ Corpus Hub contributor](https://hub.xerj.org/contributors/MrDenlol/badge.svg)](https://hub.xerj.org/contributors/MrDenlol)
-
-[![Release](https://img.shields.io/github/v/release/MrDenlol/XOR-112)](https://github.com/MrDenlol/XOR-112/releases/latest)
-
 <p align="center">
-  <a href="https://github.com/MrDenlol/XOR-112/actions/workflows/build.yml"><img src="https://github.com/MrDenlol/XOR-112/actions/workflows/build.yml/badge.svg" alt="Desktop builds"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-16834a" alt="MIT license"></a>
-  <img src="https://img.shields.io/badge/Rust-2021-orange" alt="Rust 2021">
-  <img src="https://img.shields.io/badge/interface-RU%20%2F%20EN-blue" alt="Russian and English">
+  <a href="https://github.com/MrDenlol/XOR-112/releases/latest"><img src="https://img.shields.io/github/v/release/MrDenlol/XOR-112" alt="Release" height="20"></a>
+  <a href="https://github.com/MrDenlol/XOR-112/actions/workflows/build.yml"><img src="https://github.com/MrDenlol/XOR-112/actions/workflows/build.yml/badge.svg" alt="Desktop builds" height="20"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-16834a" alt="MIT license" height="20"></a>
+  <img src="https://img.shields.io/badge/Rust-2021-orange" alt="Rust 2021" height="20">
+  <img src="https://img.shields.io/badge/interface-RU%20%2F%20EN-blue" alt="Russian and English" height="20">
+  <a href="https://hub.xerj.org/contributors/MrDenlol"><img src="https://hub.xerj.org/contributors/MrDenlol/badge.svg" alt="XERJ Corpus Hub contributor" height="20"></a>
 </p>
 
 <p align="center"><strong>Русский</strong> · <a href="README.en.md">English</a> · <a href="https://github.com/MrDenlol/XOR-112/releases">Скачать</a> · <a href="docs/USER_GUIDE.ru.md">Руководство</a> · <a href="https://github.com/MrDenlol/XOR-112/issues">Обратная связь</a></p>
