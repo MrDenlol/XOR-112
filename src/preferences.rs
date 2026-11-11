@@ -31,6 +31,8 @@ pub struct Preferences {
     pub snap: bool,
     pub frames: bool,
     pub animation: bool,
+    pub hide_properties: bool,
+    pub hide_library: bool,
     pub zoom: f32,
 }
 impl Default for Preferences {
@@ -42,6 +44,8 @@ impl Default for Preferences {
             snap: true,
             frames: true,
             animation: true,
+            hide_properties: false,
+            hide_library: false,
             zoom: 1.0,
         }
     }
@@ -139,6 +143,8 @@ mod tests {
             snap: false,
             frames: false,
             animation: false,
+            hide_properties: true,
+            hide_library: true,
             zoom: 0.75,
         };
         save(&path, &p).unwrap();
@@ -147,6 +153,10 @@ mod tests {
         let p = load(&path).unwrap();
         assert_eq!(p.zoom, 1.);
         assert_eq!(p.theme, Theme::Gray);
+        assert!(
+            !p.hide_properties && !p.hide_library,
+            "older settings keep both panels visible"
+        );
         std::fs::write(&path, "bad JSON").unwrap();
         assert!(load(&path).is_err());
     }

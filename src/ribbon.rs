@@ -9,55 +9,48 @@ impl Editor {
         egui::TopBottomPanel::top("toolbar")
             .frame(
                 egui::Frame::new()
-                    .fill(tint(Color32::from_rgb(232, 242, 235)))
-                    .inner_margin(egui::Margin::symmetric(10, 4)),
+                    .fill(workspace())
+                    .inner_margin(egui::Margin::symmetric(10, 6)),
             )
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
-                    let (r, _) = ui.allocate_exact_size(vec2(26., 26.), Sense::hover());
-                    icons::logo(ui.painter(), r);
-                    ui.add_space(10.);
-                    for (tab, label, width) in [
-                        (Tab::Home, tr("Главная"), 88.),
-                        (Tab::Settings, tr("Настройки"), 112.),
+                    let (rect, _) = ui.allocate_exact_size(vec2(28., 28.), Sense::hover());
+                    icons::logo(ui.painter(), rect, accent());
+                    ui.add_space(6.);
+                    ui.label(RichText::new("XOR-112").size(20.).strong());
+                    ui.add_space(12.);
+                    ui.separator();
+                    ui.add_space(12.);
+                    ui.label(
+                        RichText::new(tr("Редактор логических схем"))
+                            .size(13.)
+                            .color(muted()),
+                    );
+                });
+                ui.add_space(7.);
+                ui.horizontal(|ui| {
+                    for (tab, icon, label, width) in [
+                        (Tab::Home, Icon::Home, tr("Главная"), 132.),
+                        (Tab::Settings, Icon::Settings, tr("Настройки"), 150.),
                     ] {
-                        let active = self.tab == tab;
-                        let r = ui.add_sized(
-                            [width, 32.],
-                            egui::Button::new(
-                                RichText::new(label)
-                                    .size(14.)
-                                    .color(if active { accent() } else { ink() })
-                                    .strong(),
-                            )
-                            .frame(false)
-                            .corner_radius(4),
-                        );
-                        if r.clicked() {
+                        if icons::tab(ui, icon, label, self.tab == tab, width).clicked() {
                             self.tab = tab;
                         }
-                        if active {
-                            ui.painter().line_segment(
-                                [
-                                    r.rect.left_bottom() + vec2(8., 0.),
-                                    r.rect.right_bottom() - vec2(8., 0.),
-                                ],
-                                Stroke::new(2.5_f32, accent()),
-                            );
-                        }
                     }
-                    if ui
-                        .add_sized([98., 32.], egui::Button::new(tr("Справка")).frame(false))
+                    if icons::tab(ui, Icon::Help, tr("Справка"), false, 132.)
                         .on_hover_text(tr("Сочетания клавиш · F1"))
                         .clicked()
                     {
                         self.help_open = true;
                     }
                 });
+                ui.add_space(4.);
                 egui::Frame::new()
                     .fill(panel())
-                    .corner_radius(9)
-                    .inner_margin(egui::Margin::symmetric(10, 5))
+                    .corner_radius(13)
+                    .stroke(Stroke::new(1.0_f32, border()))
+                    .shadow(soft_shadow())
+                    .inner_margin(egui::Margin::symmetric(12, 8))
                     .show(ui, |ui| {
                         ui.set_width(ui.available_width());
                         egui::ScrollArea::horizontal()
@@ -69,50 +62,58 @@ impl Editor {
                                     .insert(egui::TextStyle::Body, FontId::proportional(13.));
                                 ui.horizontal_top(|ui| match self.tab {
                                     Tab::Home => {
-                                        group(ui, 154., tr("Файл"), |ui| {
-                                            ui.add_space(10.);
+                                        group(ui, 222., tr("Файл"), |ui| {
+                                            ui.add_space(2.);
                                             self.file_buttons(ui);
                                         });
                                         divider(ui);
-                                        group(ui, 154., tr("Редактирование"), |ui| {
-                                            ui.add_space(10.);
+                                        group(ui, 246., tr("Редактирование"), |ui| {
+                                            ui.add_space(2.);
                                             ui.horizontal(|ui| {
-                                                if icons::button(
+                                                if icons::command(
                                                     ui,
                                                     Icon::Undo,
+                                                    tr("Отменить"),
                                                     tr("Отменить · Ctrl+Z"),
                                                     !self.undo.is_empty(),
+                                                    58.,
                                                 )
                                                 .clicked()
                                                 {
                                                     self.undo();
                                                 }
-                                                if icons::button(
+                                                if icons::command(
                                                     ui,
                                                     Icon::Redo,
+                                                    tr("Вернуть"),
                                                     tr("Повторить · Ctrl+Y"),
                                                     !self.redo.is_empty(),
+                                                    58.,
                                                 )
                                                 .clicked()
                                                 {
                                                     self.redo();
                                                 }
-                                                if icons::button(
+                                                if icons::command(
                                                     ui,
                                                     Icon::Copy,
+                                                    tr("Копировать"),
                                                     tr("Дублировать · Ctrl+D"),
                                                     self.selected.is_some(),
+                                                    58.,
                                                 )
                                                 .clicked()
                                                 {
                                                     self.duplicate();
                                                 }
-                                                if icons::button(
+                                                if icons::command(
                                                     ui,
                                                     Icon::Delete,
+                                                    tr("Удалить"),
                                                     tr("Удалить · Delete"),
                                                     self.selected.is_some()
                                                         || self.selected_wire.is_some(),
+                                                    58.,
                                                 )
                                                 .clicked()
                                                 {
@@ -121,15 +122,17 @@ impl Editor {
                                             });
                                         });
                                         divider(ui);
-                                        group(ui, 60., tr("Проверка"), |ui| {
-                                            ui.add_space(10.);
+                                        group(ui, 84., tr("Проверка"), |ui| {
+                                            ui.add_space(2.);
                                             ui.horizontal(|ui| {
-                                                ui.add_space(12.);
-                                                if icons::button(
+                                                ui.add_space(13.);
+                                                if icons::command(
                                                     ui,
                                                     Icon::Table,
+                                                    tr("Таблица"),
                                                     tr("Таблица истинности"),
                                                     true,
+                                                    58.,
                                                 )
                                                 .clicked()
                                                 {
@@ -138,10 +141,10 @@ impl Editor {
                                             });
                                         });
                                         divider(ui);
-                                        group(ui, 332., tr("Отображение"), |ui| {
+                                        group(ui, 366., tr("Отображение"), |ui| {
                                             ui.horizontal_top(|ui| {
                                                 ui.vertical(|ui| {
-                                                    ui.set_width(155.);
+                                                    ui.set_width(136.);
                                                     ui.checkbox(&mut self.grid, tr("Сетка"));
                                                     ui.add_enabled_ui(
                                                         self.circuit.alu64.is_none(),
@@ -162,49 +165,16 @@ impl Editor {
                                                         &mut self.animate_wires,
                                                         tr("Анимация проводов"),
                                                     );
+                                                    ui.checkbox(
+                                                        &mut self.hide_properties,
+                                                        tr("Скрыть свойства"),
+                                                    );
+                                                    ui.checkbox(
+                                                        &mut self.hide_library,
+                                                        tr("Скрыть библиотеку элементов"),
+                                                    );
                                                 });
                                             });
-                                        });
-                                        divider(ui);
-                                        group(ui, 196., tr("Масштаб"), |ui| {
-                                            ui.add_space(10.);
-                                            ui.allocate_ui_with_layout(
-                                                vec2(196., 38.),
-                                                egui::Layout::left_to_right(egui::Align::Center),
-                                                |ui| {
-                                                    if icons::button(
-                                                        ui,
-                                                        Icon::Minus,
-                                                        tr("Уменьшить масштаб"),
-                                                        true,
-                                                    )
-                                                    .clicked()
-                                                    {
-                                                        self.set_zoom(self.zoom / 1.15);
-                                                    }
-                                                    self.zoom_control(ui, "ribbon_zoom");
-                                                    if icons::button(
-                                                        ui,
-                                                        Icon::Plus,
-                                                        tr("Увеличить масштаб"),
-                                                        true,
-                                                    )
-                                                    .clicked()
-                                                    {
-                                                        self.set_zoom(self.zoom * 1.15);
-                                                    }
-                                                    if icons::button(
-                                                        ui,
-                                                        Icon::Fit,
-                                                        tr("Показать всю схему · F"),
-                                                        true,
-                                                    )
-                                                    .clicked()
-                                                    {
-                                                        self.fit_next = true;
-                                                    }
-                                                },
-                                            );
                                         });
                                     }
                                     Tab::Settings => {
@@ -267,14 +237,40 @@ impl Editor {
     }
     fn file_buttons(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
-            if icons::button(ui, Icon::New, tr("Новая схема · Ctrl+N"), true).clicked() {
+            if icons::command(
+                ui,
+                Icon::New,
+                tr("Создать"),
+                tr("Новая схема · Ctrl+N"),
+                true,
+                58.,
+            )
+            .clicked()
+            {
                 self.request(Action::New);
             }
-            if icons::button(ui, Icon::Open, tr("Загрузить схему · Ctrl+O"), true).clicked()
+            if icons::command(
+                ui,
+                Icon::Open,
+                tr("Открыть"),
+                tr("Загрузить схему · Ctrl+O"),
+                true,
+                58.,
+            )
+            .clicked()
             {
                 self.request(Action::Open);
             }
-            if icons::button(ui, Icon::Save, tr("Сохранить · Ctrl+S"), true).clicked() {
+            if icons::command(
+                ui,
+                Icon::Save,
+                tr("Сохранить"),
+                tr("Сохранить · Ctrl+S"),
+                true,
+                64.,
+            )
+            .clicked()
+            {
                 self.save(false);
             }
             let more = icons::button(ui, Icon::More, tr("Ещё: сохранить как и примеры"), true);
@@ -297,6 +293,11 @@ impl Editor {
                     for (label, action) in [
                         (tr("Пример: полусумматор"), Action::Half),
                         (tr("Пример: полный сумматор"), Action::Full),
+                        (
+                            tr("Пример: большинство от трёх переменных"),
+                            Action::Majority,
+                        ),
+                        (tr("Пример: мультиплексор на 8 входов"), Action::Mux8),
                         (tr("Пример: АЛУ · 32 бита"), Action::Alu32),
                         (tr("Пример: АЛУ · 64 бита"), Action::Alu64),
                     ] {

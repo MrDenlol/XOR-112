@@ -9,7 +9,7 @@ fn main() -> eframe::Result<()> {
         viewport: eframe::egui::ViewportBuilder::default()
             .with_title(tr("XOR-112"))
             .with_icon(icons::app_icon())
-            .with_inner_size([1280.0, 720.0])
+            .with_inner_size([1280.0, 800.0])
             .with_min_inner_size([1000.0, 650.0]),
         renderer: eframe::Renderer::Glow,
         ..Default::default()

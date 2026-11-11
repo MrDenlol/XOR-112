@@ -8,6 +8,8 @@ impl Editor {
             snap: self.snap,
             frames: self.show_frames,
             animation: self.animate_wires,
+            hide_properties: self.hide_properties,
+            hide_library: self.hide_library,
             zoom: self.zoom,
         }
     }
@@ -22,6 +24,8 @@ impl Editor {
                     self.snap = p.snap;
                     self.show_frames = p.frames;
                     self.animate_wires = p.animation;
+                    self.hide_properties = p.hide_properties;
+                    self.hide_library = p.hide_library;
                     self.zoom = p.zoom;
                     self.fit_next = false;
                     self.settings_seen = p.clone();

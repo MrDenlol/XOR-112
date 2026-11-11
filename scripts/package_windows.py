@@ -11,7 +11,7 @@ target = Path(os.environ.get("CARGO_TARGET_DIR", root / "target"))
 exe = target / "release/xor-112.exe"
 if not exe.is_file():
     raise SystemExit("Build the Windows release before packaging")
-for name in ["half-adder", "full-adder", "alu32", "alu64"]:
+for name in ["half-adder", "full-adder", "majority", "mux8", "alu32", "alu64"]:
     if not (root / f"examples/circuits/{name}.binary").is_file():
         raise SystemExit("Run cargo run --release --example export_examples first")
 dist = root / "dist"

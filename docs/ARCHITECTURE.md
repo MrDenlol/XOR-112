@@ -5,6 +5,8 @@ The simulator is a library; the native egui/eframe editor is the binary. Graph e
 | Module | Responsibility |
 |---|---|
 | `model.rs` | Gate types, graph validation, topological evaluation, truth tables |
+| `circuit_examples.rs` | Majority, multiplexer and editable template insertion with unique IDs |
+| `shell_view.rs` | Library, status bar and reusable panel presentation |
 | `netlist.rs` | Fully expanded ALU generator and arithmetic regression tests |
 | `storage.rs` | Versioned JSON, validation and atomic file replacement |
 | `editor.rs`, `ribbon.rs` | Canvas interaction, history and commands |

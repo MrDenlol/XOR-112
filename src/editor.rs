@@ -1,4 +1,5 @@
 use crate::icons::{self, Icon};
+use xor_112::circuit_examples::Template;
 use xor_112::i18n::tr;
 #[path = "alu_view.rs"]
 mod alu_view;
@@ -10,6 +11,9 @@ mod help;
 mod netlist_view;
 #[path = "ribbon.rs"]
 mod ribbon;
+#[path = "shell_view.rs"]
+mod shell_view;
+use shell_view::{panel_heading, result_band};
 #[path = "settings_view.rs"]
 mod settings_view;
 #[path = "wire_animation.rs"]
@@ -45,6 +49,8 @@ enum Action {
     Open,
     Half,
     Full,
+    Majority,
+    Mux8,
     Alu32,
     Alu64,
     Quit,
@@ -63,6 +69,7 @@ pub struct Editor {
     selected: Option<NodeId>,
     selected_wire: Option<usize>,
     tool: Option<Kind>,
+    template: Option<Template>,
     pending_pin: Option<Pin>,
     undo: Vec<Circuit>,
     redo: Vec<Circuit>,
@@ -76,6 +83,8 @@ pub struct Editor {
     snap: bool,
     show_frames: bool,
     animate_wires: bool,
+    hide_properties: bool,
+    hide_library: bool,
     help_open: bool,
     status: String,
     status_error: bool,
@@ -157,6 +166,7 @@ impl Editor {
         // event must not switch back to egui's default square controls.
         ctx.set_theme(egui::ThemePreference::Light);
         ctx.set_style_of(egui::Theme::Light, style);
+        appearance::apply(ctx, Theme::Green);
         let circuit = Circuit::half_adder();
         Self {
             saved: circuit.clone(),
@@ -165,6 +175,7 @@ impl Editor {
             selected: None,
             selected_wire: None,
             tool: None,
+            template: None,
             pending_pin: None,
             undo: vec![],
             redo: vec![],
@@ -178,6 +189,8 @@ impl Editor {
             snap: true,
             show_frames: true,
             animate_wires: true,
+            hide_properties: false,
+            hide_library: false,
             help_open: false,
             status: tr("Готово").into(),
             status_error: false,
@@ -256,6 +269,7 @@ impl Editor {
         self.redo.clear();
         self.clear_selection();
         self.tool = None;
+        self.template = None;
         self.fit_next = true;
         self.truth = None;
         self.message(tr("Схема открыта"), false);
@@ -314,6 +328,8 @@ impl Editor {
             Action::New => self.replace(Circuit::default(), None),
             Action::Half => self.replace(Circuit::half_adder(), None),
             Action::Full => self.replace(Circuit::full_adder(), None),
+            Action::Majority => self.replace(Circuit::majority(), None),
+            Action::Mux8 => self.replace(Circuit::mux8(), None),
             Action::Alu32 => self.replace(Circuit::alu32_example(), None),
             Action::Alu64 => self.replace(Circuit::alu64_example(), None),
             Action::Open => {
@@ -379,6 +395,7 @@ impl Editor {
         if ctx.input(|i| i.key_pressed(Key::Escape)) {
             self.pending_pin = None;
             self.tool = None;
+            self.template = None;
             self.clear_selection();
         }
         if ctx.wants_keyboard_input() {
@@ -503,98 +520,30 @@ impl Editor {
             self.zoom = zoom.clamp(0.005, 2.5);
         }
     }
-    fn palette(&mut self, ctx: &egui::Context) {
-        egui::SidePanel::left("library")
-            .exact_width(204.0)
-            .resizable(false)
-            .frame(egui::Frame::new().fill(panel()).inner_margin(18.0))
-            .show(ctx, |ui| {
-                ui.add_space(6.0);
-                ui.label(
-                    RichText::new(tr("ЭЛЕМЕНТЫ"))
-                        .size(11.0)
-                        .strong()
-                        .color(muted()),
-                );
-                ui.add_space(6.0);
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    self.netlist_navigation(ui);
-                    if ui
-                        .add_sized(
-                            [168.0, 36.0],
-                            egui::Button::new(tr("↖   Выбор"))
-                                .selected(self.tool.is_none())
-                                .corner_radius(9),
-                        )
-                        .clicked()
-                    {
-                        self.tool = None;
-                        self.pending_pin = None;
-                    }
-                    ui.add_space(4.0);
-                    for (i, kind) in Kind::ALL.into_iter().enumerate() {
-                        if i == 2 {
-                            ui.add_space(10.0);
-                            ui.label(
-                                RichText::new(tr("ЛОГИЧЕСКИЕ ВЕНТИЛИ"))
-                                    .size(10.0)
-                                    .color(muted()),
-                            );
-                        }
-                        let symbol = match kind {
-                            Kind::Input => "○",
-                            Kind::Output => "○",
-                            Kind::And | Kind::Nand => "&",
-                            Kind::Or | Kind::Nor => "≥1",
-                            Kind::Not => "¬",
-                            Kind::Xor => "!=",
-                            Kind::Xnor => "=",
-                            Kind::Buffer => ">",
-                        };
-                        if ui
-                            .add_sized(
-                                [168.0, 35.0],
-                                egui::Button::new(format!("{symbol}     {}", kind.name()))
-                                    .selected(self.tool == Some(kind))
-                                    .corner_radius(9),
-                            )
-                            .on_hover_text(kind.description())
-                            .clicked()
-                        {
-                            self.tool = Some(kind);
-                            self.pending_pin = None;
-                            self.message(
-                                if xor_112::i18n::is_english() {
-                                    format!("Selected element: {}", kind.name())
-                                } else {
-                                    format!("Выбран элемент: {}", kind.name())
-                                },
-                                false,
-                            );
-                        }
-                    }
-                });
-            });
-    }
     fn inspector(&mut self, ctx: &egui::Context, eval: &Evaluation) {
         egui::SidePanel::right("inspector")
-            .exact_width(234.0)
+            .default_width(264.0)
+            .width_range(0.0..=264.0)
             .resizable(false)
-            .frame(egui::Frame::new().fill(panel()).inner_margin(18.0))
+            .show_separator_line(false)
+            .frame(card_frame())
             .show(ctx, |ui| {
+                ui.set_min_width(0.);
+                panel_heading(ui, Icon::Info, tr("Свойства"));
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    ui.add_space(6.0);
+                    ui.add_space(3.0);
                     ui.label(
-                        RichText::new(tr("СХЕМА"))
+                        RichText::new(tr("Схема"))
                             .size(11.0)
                             .strong()
                             .color(muted()),
                     );
-                    ui.add_space(7.0);
+                    ui.add_space(3.0);
                     let mut title = self.circuit.title.clone();
                     let response = ui.add(
                         egui::TextEdit::singleline(&mut title)
-                            .desired_width(194.0)
+                            .desired_width(f32::INFINITY)
+                            .margin(vec2(8., 6.))
                             .char_limit(120)
                             .hint_text(tr("Название схемы")),
                     );
@@ -613,25 +562,26 @@ impl Editor {
                         .size(11.0)
                         .color(muted()),
                     );
-                    ui.add_space(12.0);
+                    ui.add_space(3.0);
                     ui.separator();
-                    ui.add_space(10.0);
+                    ui.add_space(3.0);
                     if let Some(n) = self.selected.and_then(|id| self.circuit.node(id)).cloned() {
                         ui.label(
-                            RichText::new(tr("ВЫБРАННЫЙ ЭЛЕМЕНТ"))
+                            RichText::new(tr("Выбранный элемент"))
                                 .size(10.0)
                                 .color(muted()),
                         );
                         ui.heading(n.kind.name());
                         ui.label(RichText::new(n.kind.description()).size(12.0));
-                        ui.add_space(8.0);
+                        ui.add_space(3.0);
                         ui.label(RichText::new(tr("Подпись")).size(12.0).color(muted()));
                         let mut label = n.label.clone();
                         if ui
                             .add(
                                 egui::TextEdit::singleline(&mut label)
                                     .char_limit(48)
-                                    .desired_width(194.0),
+                                    .desired_width(f32::INFINITY)
+                                    .margin(vec2(8., 6.)),
                             )
                             .changed()
                         {
@@ -643,7 +593,7 @@ impl Editor {
                                 .unwrap()
                                 .label = label;
                         }
-                        ui.add_space(8.0);
+                        ui.add_space(3.0);
                         if n.kind == Kind::Input {
                             ui.horizontal(|ui| {
                                 ui.label(tr("Значение"));
@@ -665,25 +615,23 @@ impl Editor {
                                 }
                             });
                         } else {
-                            ui.horizontal(|ui| {
-                                ui.label(tr("Результат"));
-                                let value = eval.values.get(&n.id).copied().flatten();
-                                ui.label(
-                                    RichText::new(bit_text(value))
-                                        .size(24.0)
-                                        .color(signal_color(value)),
-                                );
-                            });
+                            result_band(ui, eval.values.get(&n.id).copied().flatten());
                         }
                         if ui
-                            .button(tr("Дублировать"))
+                            .add_sized(
+                                [ui.available_width(), 32.],
+                                egui::Button::new(tr("Дублировать")),
+                            )
                             .on_hover_text(tr("Ctrl+D · без соединений"))
                             .clicked()
                         {
                             self.duplicate();
                         }
                         if ui
-                            .button(tr("Удалить элемент"))
+                            .add_sized(
+                                [ui.available_width(), 32.],
+                                egui::Button::new(tr("Удалить элемент")),
+                            )
                             .on_hover_text("Delete")
                             .clicked()
                         {
@@ -707,13 +655,13 @@ impl Editor {
                                 .color(muted()),
                         );
                     }
-                    ui.add_space(16.0);
+                    ui.add_space(3.0);
                     ui.separator();
-                    ui.add_space(10.0);
+                    ui.add_space(3.0);
                     if self.circuit.netlist.is_some() {
                         self.netlist_controls(ui, eval);
                     } else {
-                        ui.label(RichText::new(tr("ВЫХОДЫ СХЕМЫ")).size(10.0).color(muted()));
+                        ui.label(RichText::new(tr("Выходы схемы")).size(10.0).color(muted()));
                         let outputs: Vec<_> = self
                             .circuit
                             .nodes
@@ -746,9 +694,9 @@ impl Editor {
                                 );
                             });
                         }
-                        ui.add_space(16.0);
+                        ui.add_space(3.0);
                         ui.separator();
-                        ui.add_space(10.0);
+                        ui.add_space(3.0);
                     }
                     ui.label(RichText::new(tr("ПРОВЕРКА")).size(10.0).color(muted()));
                     if self.circuit.nodes.is_empty() {
@@ -902,12 +850,19 @@ impl Editor {
         } else {
             self.pending_pin = Some(pin);
             self.tool = None;
+            self.template = None;
             self.message(tr("Выбран первый контакт"), false);
         }
     }
     fn canvas(&mut self, ctx: &egui::Context, _eval: &Evaluation) {
         egui::CentralPanel::default()
-            .frame(egui::Frame::new().fill(paper()))
+            .frame(
+                egui::Frame::new()
+                    .fill(paper())
+                    .corner_radius(12)
+                    .stroke(Stroke::new(1.0_f32, border()))
+                    .outer_margin(egui::Margin::symmetric(4, 6)),
+            )
             .show(ctx, |ui| {
                 let (rect, response) =
                     ui.allocate_exact_size(ui.available_size(), Sense::click_and_drag());
@@ -930,7 +885,10 @@ impl Editor {
                             self.pan = p - rect.min - before.to_vec2() * self.zoom;
                         }
                     }
-                    if self.zoom >= 0.3 && response.drag_started_by(PointerButton::Primary) {
+                    if self.template.is_none()
+                        && self.zoom >= 0.3
+                        && response.drag_started_by(PointerButton::Primary)
+                    {
                         if let Some(p) = ctx.input(|i| i.pointer.press_origin()) {
                             if self.pin_at(p, rect).is_none() {
                                 self.drag_node = self
@@ -985,7 +943,10 @@ impl Editor {
                     }
                     if response.clicked_by(PointerButton::Primary) {
                         if let Some(p) = pointer {
-                            if self.zoom < 0.3 {
+                            if let Some(template) = self.template {
+                                let world = snap_position(self.world(p, rect), self.snap);
+                                self.place_template(template, world);
+                            } else if self.zoom < 0.3 {
                                 let closest = self
                                     .circuit
                                     .nodes
@@ -1013,6 +974,7 @@ impl Editor {
                                 self.selected_wire = None;
                                 self.pending_pin = None;
                                 self.tool = None;
+                                self.template = None;
                             } else if let Some(pin) = self.pin_at(p, rect) {
                                 self.connect_pin(pin);
                             } else if let Some(n) = self
@@ -1043,6 +1005,7 @@ impl Editor {
                                             self.selected = Some(id);
                                             self.selected_wire = None;
                                             self.tool = None;
+                                            self.template = None;
                                             self.message(tr("Элемент добавлен"), false);
                                         }
                                         Err(e) => self.message(e, true),
@@ -1073,6 +1036,7 @@ impl Editor {
                             }
                             self.pending_pin = None;
                             self.tool = None;
+                            self.template = None;
                         }
                     }
                 }
@@ -1095,9 +1059,9 @@ impl Editor {
                             let position = offset + index as f32 * step;
                             let major = index.rem_euclid(5) == 0;
                             let color = if major {
-                                tint(Color32::from_rgb(194, 212, 201))
+                                tint(Color32::from_rgb(222, 229, 225))
                             } else {
-                                tint(Color32::from_rgb(228, 237, 231))
+                                tint(Color32::from_rgb(239, 243, 241))
                             };
                             let points = if vertical {
                                 [pos2(position, rect.top()), pos2(position, rect.bottom())]
@@ -1214,7 +1178,30 @@ impl Editor {
                         muted(),
                     );
                 }
-                if self.tool.is_some() {
+                if let Some(template) = self.template {
+                    if let Some(p) = pointer.filter(|p| rect.contains(*p)) {
+                        let source = template.build();
+                        let min = source
+                            .nodes
+                            .iter()
+                            .fold(pos2(f32::INFINITY, f32::INFINITY), |p, n| {
+                                pos2(p.x.min(n.x), p.y.min(n.y))
+                            });
+                        let origin = snap_position(self.world(p, rect), self.snap);
+                        for n in source.nodes {
+                            painter.rect_stroke(
+                                Rect::from_min_size(
+                                    self.screen(origin + vec2(n.x - min.x, n.y - min.y), rect),
+                                    NODE_SIZE * self.zoom,
+                                ),
+                                12.0 * self.zoom,
+                                Stroke::new(1.2_f32, accent()),
+                                egui::StrokeKind::Inside,
+                            );
+                        }
+                    }
+                    ctx.set_cursor_icon(egui::CursorIcon::Crosshair);
+                } else if self.tool.is_some() {
                     if let Some(p) = pointer {
                         if rect.contains(p) {
                             painter.rect_stroke(
@@ -1238,6 +1225,20 @@ impl Editor {
                     ctx.set_cursor_icon(egui::CursorIcon::Crosshair);
                 }
             });
+    }
+    fn place_template(&mut self, template: Template, position: Pos2) {
+        let mut next = self.circuit.clone();
+        match next.insert_template(template, position.x, position.y) {
+            Ok(_) => {
+                self.checkpoint();
+                self.circuit = next;
+                self.clear_selection();
+                self.template = None;
+                self.tool = None;
+                self.message(tr("Схема вставлена"), false);
+            }
+            Err(e) => self.message(e, true),
+        }
     }
     fn label_at(&self, p: Pos2, rect: Rect) -> Option<NodeId> {
         if self.zoom < 0.3 {
@@ -1315,9 +1316,9 @@ impl Editor {
         }
         if self.show_frames {
             painter.rect_filled(
-                r.translate(vec2(0.0, 2.0 * z)),
+                r.translate(vec2(0.0, 3.0 * z)),
                 (12.0 * z).clamp(3.0, 30.0),
-                Color32::from_rgba_unmultiplied(35, 75, 48, 9),
+                Color32::from_black_alpha(12),
             );
             painter.rect_filled(
                 r,
@@ -1697,6 +1698,12 @@ impl Editor {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
         self.prepare_preferences(ctx);
+        // Rounded panels leave gaps: paint an opaque workspace beneath them.
+        ctx.layer_painter(egui::LayerId::background()).rect_filled(
+            ctx.screen_rect(),
+            0.,
+            workspace(),
+        );
         self.shortcuts(ctx);
         ctx.send_viewport_cmd(egui::ViewportCommand::Title(
             if xor_112::i18n::is_english() {
@@ -1714,65 +1721,20 @@ impl Editor {
             },
         ));
         self.toolbar(ctx);
-        egui::TopBottomPanel::bottom("status")
-            .frame(
-                egui::Frame::new()
-                    .fill(panel())
-                    .inner_margin(egui::Margin::symmetric(16, 8)),
-            )
-            .show(ctx, |ui| {
-                let (row, _) =
-                    ui.allocate_exact_size(vec2(ui.available_width(), 32.0), Sense::hover());
-                let controls = Rect::from_min_max(pos2(row.right() - 260.0, row.top()), row.max);
-                let status =
-                    Rect::from_min_max(row.min, pos2(controls.left() - 16.0, row.bottom()));
-                ui.put(
-                    status,
-                    egui::Label::new(
-                        RichText::new(xor_112::i18n::display_message(&self.status))
-                            .size(12.0)
-                            .color(if self.status_error { error() } else { muted() }),
-                    )
-                    .truncate(),
-                );
-                ui.scope_builder(
-                    egui::UiBuilder::new()
-                        .max_rect(controls)
-                        .layout(egui::Layout::left_to_right(egui::Align::Center)),
-                    |ui| {
-                        ui.spacing_mut().item_spacing.x = 6.0;
-                        if ui
-                            .add_sized([32.0, 32.0], egui::Button::new("−").corner_radius(9))
-                            .clicked()
-                        {
-                            self.set_zoom(self.zoom / 1.15);
-                        }
-                        self.zoom_control(ui, "status_zoom");
-                        if ui
-                            .add_sized([32.0, 32.0], egui::Button::new("+").corner_radius(9))
-                            .clicked()
-                        {
-                            self.set_zoom(self.zoom * 1.15);
-                        }
-                        if ui
-                            .add_sized(
-                                [104.0, 32.0],
-                                egui::Button::new(tr("Вся схема")).corner_radius(9),
-                            )
-                            .clicked()
-                        {
-                            self.fit_next = true;
-                        }
-                    },
-                );
-            });
+        self.status_bar(ctx);
         if self.circuit.alu64.is_some() {
-            self.alu_panel(ctx);
+            if !self.hide_properties {
+                self.alu_panel(ctx);
+            }
             self.alu_canvas(ctx);
         } else {
             let eval = self.cached_evaluation();
-            self.palette(ctx);
-            self.inspector(ctx, &eval);
+            if !self.hide_library {
+                self.palette(ctx);
+            }
+            if !self.hide_properties {
+                self.inspector(ctx, &eval);
+            }
             self.canvas(ctx, &eval);
         }
         self.dialogs(ctx);
@@ -1840,6 +1802,11 @@ fn ribbon_caption(ui: &mut egui::Ui, title: &str, width: f32) {
 }
 
 impl eframe::App for Editor {
+    fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
+        appearance::set_theme(self.theme);
+        workspace().to_normalized_gamma_f32()
+    }
+
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
         self.flush_preferences();
     }
@@ -2063,9 +2030,10 @@ mod ui_tests {
             })
             .collect();
         assert!(!selected.is_empty());
-        assert!(selected
-            .iter()
-            .all(|r| r.corner_radius == egui::CornerRadius::same(9)));
+        assert!(selected.iter().all(|r| r.corner_radius.nw > 0
+            && r.corner_radius.ne > 0
+            && r.corner_radius.sw > 0
+            && r.corner_radius.se > 0));
         let node_rect = app.node_rect(app.circuit.node(3).unwrap(), app.canvas_rect);
         let has_card = |out: &egui::FullOutput| {
             out.shapes
@@ -2076,6 +2044,237 @@ mod ui_tests {
         app.show_frames = false;
         let out = frame(&mut app, &ctx, &mut time, vec![]);
         assert!(!has_card(&out));
+    }
+    #[test]
+    fn workspace_covers_panel_gaps_in_every_theme() {
+        for theme in [Theme::Green, Theme::Blue, Theme::Gray] {
+            let (mut app, ctx, mut time) = fixture();
+            app.theme = theme;
+            let out = frame(&mut app, &ctx, &mut time, vec![]);
+            let clear = eframe::App::clear_color(&app, &ctx.style().visuals);
+            assert_eq!(clear[3], 1.0);
+            assert!(clear[..3].iter().all(|c| *c > 0.85));
+            assert!(out.shapes.iter().any(|s| matches!(&s.shape,
+                egui::Shape::Rect(r) if r.rect.contains_rect(ctx.screen_rect()) && r.fill == workspace() && r.fill.a() == 255)));
+        }
+    }
+    #[test]
+    fn redesigned_shell_keeps_one_bottom_zoom_and_fit_in_both_languages() {
+        for language in [Language::Russian, Language::English] {
+            for theme in [Theme::Green, Theme::Blue, Theme::Gray] {
+                let (mut app, ctx, mut time) = fixture();
+                app.language = language;
+                app.theme = theme;
+                app.zoom = 2.;
+                app.pan = vec2(10000., 10000.);
+                let out = frame(&mut app, &ctx, &mut time, vec![]);
+                let texts: Vec<_> = out
+                    .shapes
+                    .iter()
+                    .filter_map(|s| match &s.shape {
+                        egui::Shape::Text(t) => Some(t),
+                        _ => None,
+                    })
+                    .collect();
+                for label in [
+                    tr("Библиотека элементов"),
+                    tr("Свойства"),
+                    tr("Создать"),
+                    tr("Открыть"),
+                ] {
+                    assert!(
+                        texts.iter().any(|t| t.galley.text() == label),
+                        "missing {label}"
+                    );
+                }
+                assert!(!texts
+                    .iter()
+                    .any(|t| ["Масштаб", "Zoom", "Вся схема", "Fit circuit"]
+                        .contains(&t.galley.text())));
+                let zoom: Vec<_> = texts.iter().filter(|t| t.galley.text() == "200%").collect();
+                assert_eq!(zoom.len(), 1);
+                assert!(zoom[0].pos.y > app.canvas_rect.bottom());
+                click(&mut app, &ctx, &mut time, pos2(1230., 776.));
+                assert!(
+                    app.pan.length() < 5000.,
+                    "bottom fit icon must recenter the circuit"
+                );
+                assert!(app.zoom < 2.);
+            }
+        }
+    }
+    #[test]
+    fn template_placement_preserves_existing_circuit_and_undoes_as_one_action() {
+        for template in Template::ALL {
+            for zoom in [0.2, 0.8] {
+                let (mut app, ctx, mut time) = fixture();
+                app.zoom = zoom;
+                app.pan = vec2(20., 70.);
+                app.fit_next = false;
+                app.snap = true;
+                app.template = Some(template);
+                let before = app.circuit.clone();
+                let location = app.screen(pos2(503., 461.), app.canvas_rect);
+                click(&mut app, &ctx, &mut time, location);
+                let inserted = app.circuit.clone();
+                assert!(app.template.is_none());
+                assert_eq!(
+                    inserted.nodes.len(),
+                    before.nodes.len() + template.build().nodes.len()
+                );
+                assert_eq!(inserted.nodes[..before.nodes.len()], before.nodes);
+                assert_eq!(inserted.wires[..before.wires.len()], before.wires);
+                for node in &inserted.nodes[before.nodes.len()..] {
+                    assert_eq!(node.x.rem_euclid(GRID_STEP), 0.);
+                    assert_eq!(node.y.rem_euclid(GRID_STEP), 0.);
+                }
+                inserted.validate().unwrap();
+                assert!(app.cached_evaluation().missing.is_empty());
+                assert_eq!(app.undo.len(), 1);
+                app.undo();
+                assert_eq!(app.circuit, before);
+                app.redo();
+                assert_eq!(app.circuit, inserted);
+                app.template = Some(template);
+                frame(
+                    &mut app,
+                    &ctx,
+                    &mut time,
+                    vec![Event::Key {
+                        key: Key::Escape,
+                        physical_key: None,
+                        pressed: true,
+                        repeat: false,
+                        modifiers: Modifiers::NONE,
+                    }],
+                );
+                assert!(app.template.is_none());
+                assert_eq!(app.circuit, inserted);
+            }
+        }
+    }
+    #[test]
+    fn library_templates_can_be_selected_in_both_languages() {
+        for language in [Language::Russian, Language::English] {
+            let (mut app, ctx, mut time) = fixture();
+            app.language = language;
+            let out = frame(&mut app, &ctx, &mut time, vec![]);
+            let text_position = |out: &egui::FullOutput, text: &str| {
+                out.shapes
+                    .iter()
+                    .find_map(|s| match &s.shape {
+                        egui::Shape::Text(t) if t.galley.text() == text => {
+                            Some(t.pos + vec2(5., 5.))
+                        }
+                        _ => None,
+                    })
+                    .unwrap_or_else(|| panic!("missing library label: {text}"))
+            };
+            let gates = text_position(&out, tr("Логические вентили"));
+            click(&mut app, &ctx, &mut time, gates);
+            time += 1.;
+            let out = frame(&mut app, &ctx, &mut time, vec![]);
+            text_position(&out, tr("Готовые схемы"));
+            for template in Template::ALL {
+                let out = frame(&mut app, &ctx, &mut time, vec![]);
+                let pos = text_position(&out, template.name());
+                click(&mut app, &ctx, &mut time, pos);
+                assert_eq!(app.template, Some(template));
+                assert!(app.tool.is_none());
+            }
+        }
+    }
+    #[test]
+    fn blue_theme_recolors_signals_and_native_icon() {
+        let (mut app, ctx, mut time) = fixture();
+        app.theme = Theme::Blue;
+        let output = frame(&mut app, &ctx, &mut time, vec![]);
+        assert!(high().b() > high().g());
+        assert!(low().b() > low().g());
+        assert!(panel().b() >= panel().g());
+        let icon = output.viewport_output[&egui::ViewportId::ROOT]
+            .commands
+            .iter()
+            .find_map(|cmd| {
+                if let egui::ViewportCommand::Icon(Some(icon)) = cmd {
+                    Some(icon)
+                } else {
+                    None
+                }
+            })
+            .expect("changing theme must update native icon");
+        assert!(icon
+            .rgba
+            .chunks_exact(4)
+            .any(|rgba| rgba == [36, 101, 180, 255]));
+        assert!(!icon
+            .rgba
+            .chunks_exact(4)
+            .any(|rgba| rgba == [33, 115, 70, 255]));
+    }
+    #[test]
+    fn hiding_panels_expands_canvas_and_survives_restart() {
+        for language in [Language::Russian, Language::English] {
+            let (mut app, ctx, mut time) = fixture();
+            app.language = language;
+            let dir = tempfile::tempdir().unwrap();
+            let path = dir.path().join("settings.json");
+            app.settings_path = Some(path.clone());
+            frame(&mut app, &ctx, &mut time, vec![]);
+            let original_rect = app.canvas_rect;
+            let original_circuit = app.circuit.clone();
+            let original_zoom = app.zoom;
+            for (label, hide_properties, hide_library) in [
+                ("Скрыть свойства", true, false),
+                ("Скрыть библиотеку элементов", true, true),
+                ("Скрыть свойства", false, true),
+                ("Скрыть библиотеку элементов", false, false),
+            ] {
+                let out = frame(&mut app, &ctx, &mut time, vec![]);
+                let p = out
+                    .shapes
+                    .iter()
+                    .find_map(|s| match &s.shape {
+                        egui::Shape::Text(t) if t.galley.text() == tr(label) => {
+                            Some(t.pos + vec2(5., 5.))
+                        }
+                        _ => None,
+                    })
+                    .expect("panel control is always accessible in the ribbon");
+                click(&mut app, &ctx, &mut time, p);
+                let out = frame(&mut app, &ctx, &mut time, vec![]);
+                assert_eq!(
+                    (app.hide_properties, app.hide_library),
+                    (hide_properties, hide_library)
+                );
+                let r = app.canvas_rect;
+                assert_eq!(r.left() < original_rect.left(), hide_library);
+                assert_eq!(r.right() > original_rect.right(), hide_properties);
+                assert_eq!(r.top(), original_rect.top());
+                assert_eq!(r.bottom(), original_rect.bottom());
+                for (heading, hidden) in [
+                    ("Свойства", hide_properties),
+                    ("Библиотека элементов", hide_library),
+                ] {
+                    assert_eq!(out.shapes.iter().any(|s| matches!(&s.shape, egui::Shape::Text(t) if t.galley.text() == tr(heading))), !hidden);
+                }
+                assert_eq!(app.circuit, original_circuit);
+                assert_eq!(app.zoom, original_zoom);
+                // Save through the application's normal preference path, then recreate the app.
+                app.flush_preferences();
+                let ctx2 = egui::Context::default();
+                let mut restored = Editor::from_context(&ctx2);
+                restored.restore_preferences(&ctx2, Some(path.clone()));
+                frame(&mut restored, &ctx2, &mut time, vec![]);
+                frame(&mut restored, &ctx2, &mut time, vec![]);
+                assert_eq!(
+                    (restored.hide_properties, restored.hide_library),
+                    (hide_properties, hide_library)
+                );
+                assert_eq!(restored.canvas_rect, r);
+            }
+            assert_eq!(app.canvas_rect, original_rect);
+        }
     }
     #[test]
     fn render_ui_previews_when_requested() {
@@ -2095,6 +2294,12 @@ mod ui_tests {
             ("home-blue-en", true),
             ("home-gray", true),
             ("alu32-detail", true),
+            ("majority", true),
+            ("mux8", true),
+            ("templates-blue-en", true),
+            ("hidden-properties", true),
+            ("hidden-library", true),
+            ("hidden-both", true),
         ] {
             if let Ok(filter) = std::env::var("BINARY_LOGIC_RENDER_FILTER") {
                 if !filter.split(',').any(|item| item == name) {
@@ -2109,6 +2314,8 @@ mod ui_tests {
 
             app.show_frames = frames;
             app.help_open = name == "help";
+            app.hide_properties = matches!(name, "hidden-properties" | "hidden-both");
+            app.hide_library = matches!(name, "hidden-library" | "hidden-both");
             if name.contains("blue") {
                 app.language = Language::English;
                 app.theme = Theme::Blue;
@@ -2130,9 +2337,20 @@ mod ui_tests {
             if name == "alu32-detail" {
                 app.perform(Action::Alu32);
             }
+            if name == "majority" {
+                app.perform(Action::Majority);
+            }
+            if name == "mux8" {
+                app.perform(Action::Mux8);
+            }
+            let show_templates = matches!(name, "majority" | "mux8" | "templates-blue-en");
+            let mut library_header = None;
             let mut textures = vec![];
             let mut last = None;
-            for pass in 0..3 {
+            for pass in 0..5 {
+                if pass == 4 {
+                    time += 1.;
+                }
                 if name == "help" && pass == 2 {
                     time += 1.0;
                 }
@@ -2151,8 +2369,22 @@ mod ui_tests {
                         |ctx| app.ui(ctx),
                     )
                 } else {
-                    frame(&mut app, &ctx, &mut time, vec![])
+                    let events = if show_templates && matches!(pass, 1 | 2) {
+                        let p = library_header.expect("library header in first frame");
+                        vec![Event::PointerMoved(p), pointer(p, pass == 1)]
+                    } else {
+                        vec![]
+                    };
+                    frame(&mut app, &ctx, &mut time, events)
                 };
+                if pass == 0 && show_templates {
+                    library_header = out.shapes.iter().find_map(|s| match &s.shape {
+                        egui::Shape::Text(t) if t.galley.text() == tr("Логические вентили") => {
+                            Some(t.pos + vec2(5., 5.))
+                        }
+                        _ => None,
+                    });
+                }
                 for (id, delta) in &out.textures_delta.set {
                     let pixels: Vec<[u8; 4]> = match &delta.image {
                         egui::ImageData::Color(image) => {
@@ -2369,7 +2601,7 @@ mod ui_tests {
         for invalid in ["", "abc", "NaN", "inf", "0.4", "251", "-50"] {
             assert_eq!(parse_zoom(invalid), None);
         }
-        for (control, value, expected) in [(0, "150", 1.5), (1, "75", 0.75)] {
+        for (control, value, expected) in [(0, "150", 1.5), (0, "75", 0.75)] {
             let (mut app, ctx, mut time) = fixture();
             let out = frame(&mut app, &ctx, &mut time, vec![]);
             let expected_label = format!("{:.0}%", app.zoom * 100.0);
@@ -2384,7 +2616,7 @@ mod ui_tests {
                 })
                 .collect();
             positions.sort_by(|a, b| a.y.total_cmp(&b.y));
-            assert_eq!(positions.len(), 2);
+            assert_eq!(positions.len(), 1);
             click(&mut app, &ctx, &mut time, positions[control]);
             frame(&mut app, &ctx, &mut time, vec![]);
             assert!(app.zoom_edit.is_some());

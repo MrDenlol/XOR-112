@@ -1,11 +1,19 @@
 # Example circuits
 
-The half-adder and full-adder are small editable examples. All four examples are also built into XOR-112.
+All six examples are available from the file dropdown in the application:
 
-Generate the large 32-bit and 64-bit ALUs from the repository root:
+- `half-adder.binary`: editable half adder.
+- `full-adder.binary`: editable full adder.
+- `majority.binary`: three-input majority, Tanenbaum fig. 3.3.
+- `mux8.binary`: eight-input multiplexer, fig. 3.10; ABC selects D0–D7, A is the most significant bit.
+- `alu32.binary` and `alu64.binary`: fully expanded editable ALUs.
+
+The first four are also insertable from the Circuit templates library category. Insertion preserves the current document and adds independent editable gates and wires.
+
+Regenerate all files from the project root:
 
 ```sh
 cargo run --release --locked --example export_examples
 ```
 
-This writes `half-adder.binary`, `full-adder.binary`, `alu32.binary` and `alu64.binary` here. Generated ALUs are included in the Windows release archive. They use ordinary gates and one-bit connections; no hidden arithmetic macro is needed.
+Multi-input gates are expanded into two-input gates. All circuits use ordinary one-bit connections and the existing `.binary` format.

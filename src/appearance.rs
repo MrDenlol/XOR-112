@@ -30,31 +30,57 @@ pub(super) fn ink() -> Color32 {
     tint(Color32::from_rgb(39, 57, 48))
 }
 pub(super) fn muted() -> Color32 {
-    tint(Color32::from_rgb(116, 132, 122))
+    tint(Color32::from_rgb(107, 119, 112))
 }
 pub(super) fn paper() -> Color32 {
-    tint(Color32::from_rgb(248, 250, 248))
+    tint(Color32::from_rgb(251, 252, 251))
 }
 pub(super) fn panel() -> Color32 {
-    Color32::from_rgb(254, 255, 254)
+    tint(Color32::from_rgb(254, 255, 254))
 }
 pub(super) fn border() -> Color32 {
     tint(Color32::from_rgb(220, 230, 223))
 }
 pub(super) fn high() -> Color32 {
-    Color32::from_rgb(42, 142, 113)
+    ACTIVE.with(|t| match t.get() {
+        Theme::Blue => Color32::from_rgb(36, 101, 180),
+        _ => Color32::from_rgb(42, 142, 113),
+    })
 }
 pub(super) fn low() -> Color32 {
-    Color32::from_rgb(142, 159, 148)
+    ACTIVE.with(|t| match t.get() {
+        Theme::Blue => Color32::from_rgb(142, 153, 169),
+        _ => Color32::from_rgb(142, 159, 148),
+    })
 }
 pub(super) fn error() -> Color32 {
     Color32::from_rgb(183, 106, 58)
+}
+pub(super) fn workspace() -> Color32 {
+    tint(Color32::from_rgb(243, 246, 244))
+}
+pub(super) fn soft_shadow() -> egui::epaint::Shadow {
+    egui::epaint::Shadow {
+        offset: [0, 2],
+        blur: 8,
+        spread: 0,
+        color: Color32::from_black_alpha(10),
+    }
+}
+pub(super) fn card_frame() -> egui::Frame {
+    egui::Frame::new()
+        .fill(panel())
+        .stroke(Stroke::new(1.0_f32, border()))
+        .corner_radius(13)
+        .inner_margin(14.)
+        .outer_margin(egui::Margin::symmetric(6, 6))
+        .shadow(soft_shadow())
 }
 pub(super) fn apply(ctx: &egui::Context, t: Theme) {
     set_theme(t);
     let mut style = (*ctx.style()).clone();
     style.visuals.override_text_color = Some(ink());
-    style.visuals.panel_fill = panel();
+    style.visuals.panel_fill = workspace();
     style.visuals.window_fill = panel();
     style.visuals.faint_bg_color = paper();
     style.visuals.selection.bg_fill = tint(Color32::from_rgb(216, 237, 223));
@@ -67,5 +93,22 @@ pub(super) fn apply(ctx: &egui::Context, t: Theme) {
     style.visuals.widgets.active.bg_fill = tint(Color32::from_rgb(211, 231, 219));
     style.visuals.widgets.active.weak_bg_fill = style.visuals.widgets.active.bg_fill;
     style.visuals.widgets.active.bg_stroke = Stroke::new(1.0_f32, accent());
+    style.spacing.button_padding = vec2(10., 6.);
+    style.spacing.item_spacing = vec2(7., 4.);
+    style
+        .text_styles
+        .insert(egui::TextStyle::Body, FontId::proportional(14.));
+    for widgets in [
+        &mut style.visuals.widgets.inactive,
+        &mut style.visuals.widgets.hovered,
+        &mut style.visuals.widgets.active,
+        &mut style.visuals.widgets.open,
+        &mut style.visuals.widgets.noninteractive,
+    ] {
+        widgets.corner_radius = egui::CornerRadius::same(7);
+    }
     ctx.set_style_of(egui::Theme::Light, style);
+    ctx.send_viewport_cmd(egui::ViewportCommand::Icon(Some(Arc::new(
+        icons::app_icon_colored(accent()),
+    ))));
 }

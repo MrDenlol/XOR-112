@@ -1,20 +1,22 @@
-# XOR-112 0.1.0
+# XOR-112 0.2.0
 
 ## Русский
 
-Первый публичный выпуск редактора бинарных логических схем на Rust.
+- Новый интерфейс: лента команд, скруглённые панели, один холст и масштабирование только в нижней строке.
+- Скрытие свойств и библиотеки по отдельности или вместе; холст расширяется, выбор сохраняется после перезапуска.
+- Новые развёрнутые примеры: большинство от трёх переменных и мультиплексор 8:1.
+- Раздел «Готовые схемы» для вставки всех примеров, кроме АЛУ. Каждый вентиль и провод остаётся редактируемым; вставка поддерживает сетку, отмену и повтор.
+- Все акценты и сигналы синей темы синие; обновлены иконки и исправлен чёрный фон между панелями.
+- Обновлены README, руководство и снимки экрана; добавлен оригинальный badge XERJ Hub.
 
-- Восемь базовых вентилей; создание, редактирование и сохранение схем.
-- Полностью редактируемые АЛУ на 32 и 64 бита с операциями +, −, ×, ÷ и целым квадратным корнем.
-- Русский/английский интерфейс, три темы, сетка, привязка и анимация проводов.
-- Сохранение настроек и перенос параметров из прежней версии BinaryLogic.
+**Windows:** распакуйте `XOR-112-v0.2.0-windows-x64.zip` и запустите `xor-112.exe`. Rust не требуется. Все шесть примеров входят в архив. Для графики нужен OpenGL 3.3.
 
-**Windows:** распакуйте ZIP и запустите `xor-112.exe`. Установка Rust не нужна. Все четыре примера находятся в `examples/circuits/` и доступны из меню программы. Требуется OpenGL 3.3.
+Формат `.binary`, русский/английский интерфейсы, три темы и полностью редактируемые АЛУ на 32/64 бита сохранены. Прежние схемы совместимы. Настройки переносятся автоматически; схемы сохраняются через Ctrl+S.
 
 ## English
 
-First public release of the Rust binary circuit editor. Includes eight basic gates, editable 32/64-bit gate-level ALUs, save/load, truth tables, Russian/English UI, three themes and persistent preferences.
+Redesigned ribbon and rounded panels, bottom-only zoom controls, persistent sidebar visibility, editable majority and 8:1 multiplexer examples, reusable circuit templates, fully blue theme accents/signals, refined icons and a corrected workspace background. Updated documentation includes the original XERJ Hub contributor badge.
 
-Extract the Windows x64 ZIP and run `xor-112.exe`. No Rust installation is required. Examples are included and available from the app menu. OpenGL 3.3 is required.
+Extract the Windows x64 ZIP and run `xor-112.exe`. All six examples are included. Existing `.binary` files remain compatible. Russian/English, all three themes and editable 32/64-bit ALUs are preserved.
 
-This is a combinational simulator. Arithmetic is unsigned and integer-only. Circuits must be saved manually. Windows binaries are not code-signed. `SHA256SUMS.txt` contains archive integrity hashes.
+Windows, Linux and macOS builds/tests run in GitHub Actions before release publication. The release package is for Windows; Linux/macOS binaries are available as workflow artifacts, and source build instructions are in README. Native manual testing on every OS is not implied by CI success.

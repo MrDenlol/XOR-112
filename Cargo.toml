@@ -1,6 +1,6 @@
 [package]
 name = "xor-112"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Binary logic circuit editor with fully editable 32-bit and 64-bit ALUs"
 repository = "https://github.com/MrDenlol/XOR-112"
