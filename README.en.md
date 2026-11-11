@@ -49,7 +49,7 @@ Toggle A and B in the initial half-adder. Open **Home → ⌄** for other exampl
 
 Scroll the library or collapse Logic gates to reveal Circuit templates. Choose an example, then click the canvas. All inserted nodes and wires remain independently editable; Ctrl+Z undoes the entire insertion and Esc cancels placement.
 
-The majority output is 1 when at least two of A, B, C are 1. In the multiplexer, ABC selects D0–D7 with A the most significant address bit. These follow Tanenbaum figures 3.3 and 3.10; multi-input gates are expanded into two-input gates.
+The majority output is 1 when at least two of A, B, C are 1. In the multiplexer, ABC selects D0–D7 with A the most significant address bit. Multi-input gates are expanded into two-input gates.
 
 ## Editable ALUs
 
